@@ -3,6 +3,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { useGameStore, Bullet } from "./useGameStore";
 import { ENEMY_HEAD_CENTER_Y, ENEMY_HEAD_RADIUS, ENEMY_BODY_CENTER_Y, ENEMY_BODY_RADIUS } from "./Enemies";
+import { useMultiplayerStore } from "./multiplayerStore";
 
 const BULLET_LIFETIME = 3000;
 const HEADSHOT_MULTIPLIER = 2.5;
@@ -54,6 +55,30 @@ function BulletMesh({ bullet }: { bullet: Bullet }) {
     }
 
     if (bullet.fromPlayer) {
+      // --- Remote player hit detection (multiplayer) ---
+      const mp = useMultiplayerStore.getState();
+      if (mp.enabled) {
+        for (const rp of Object.values(mp.players)) {
+          if (!rp.alive) continue;
+          // Body capsule centered at rp body
+          const bodyCenter = new THREE.Vector3(rp.x, rp.y + 1.06, rp.z);
+          const headCenter = new THREE.Vector3(rp.x, rp.y + 1.66, rp.z);
+          if (segmentHitsSphere(prevPos.current, pos.current, headCenter, 0.32)) {
+            const dmg = bullet.damage * HEADSHOT_MULTIPLIER;
+            mp.send({ type: "hit", victim: rp.id, damage: dmg, headshot: true });
+            useGameStore.getState().addKillFeed(`HEADSHOT! → ${rp.name} -${Math.round(dmg)}`);
+            store.removeBullet(bullet.id);
+            return;
+          }
+          if (segmentHitsSphere(prevPos.current, pos.current, bodyCenter, 0.55)) {
+            mp.send({ type: "hit", victim: rp.id, damage: bullet.damage, headshot: false });
+            useGameStore.getState().addKillFeed(`Hit ${rp.name} -${Math.round(bullet.damage)}`);
+            store.removeBullet(bullet.id);
+            return;
+          }
+        }
+      }
+
       const { enemies, killEnemy, addKillFeed } = useGameStore.getState();
       for (const enemy of enemies) {
         if (!enemy.alive) continue;

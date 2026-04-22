@@ -9,8 +9,13 @@ import { Bullets } from "./Bullets";
 import { LootBoxes } from "./LootBoxes";
 import { Crosshair } from "./Crosshair";
 import { HUD } from "../components/hud/HUD";
+import { Multiplayer } from "./Multiplayer";
+import { useGameStore } from "./useGameStore";
+import { useMultiplayerStore } from "./multiplayerStore";
 
 export function GameScene() {
+  const mode = useGameStore((s) => s.mode);
+  const mpEnabled = useMultiplayerStore((s) => s.enabled);
   return (
     <div style={{ width: "100vw", height: "100vh", background: "#0a0a0a", position: "relative" }}>
       <Canvas
@@ -38,9 +43,10 @@ export function GameScene() {
 
             <Player />
             <World />
-            <Enemies />
+            {mode === "solo" && <Enemies />}
             <Bullets />
             <LootBoxes />
+            {mpEnabled && <Multiplayer />}
           </Physics>
         </Suspense>
       </Canvas>

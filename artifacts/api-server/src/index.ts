@@ -1,5 +1,10 @@
+import { createServer } from "node:http";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import express from "express";
 import app from "./app";
 import { logger } from "./lib/logger";
+import { attachMultiplayer } from "./multiplayer";
 
 const rawPort = process.env["PORT"];
 
@@ -15,11 +20,20 @@ if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
-app.listen(port, (err) => {
-  if (err) {
-    logger.error({ err }, "Error listening on port");
-    process.exit(1);
-  }
+// Serve the built frontend (when present) so the API server can host the SPA too.
+const here = path.dirname(fileURLToPath(import.meta.url));
+const staticDir = path.resolve(here, "../public");
 
-  logger.info({ port }, "Server listening");
+app.use(express.static(staticDir, { index: "index.html", extensions: ["html"] }));
+app.get(/^(?!\/(api|ws)).*/, (_req, res, next) => {
+  res.sendFile(path.join(staticDir, "index.html"), (err) => {
+    if (err) next();
+  });
+});
+
+const server = createServer(app);
+attachMultiplayer(server);
+
+server.listen(port, () => {
+  logger.info({ port }, "Server listening (HTTP + WebSocket on /ws)");
 });

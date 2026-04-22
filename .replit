@@ -10,6 +10,10 @@ localPort = 5000
 externalPort = 80
 
 [[ports]]
+localPort = 5050
+externalPort = 3002
+
+[[ports]]
 localPort = 26079
 externalPort = 3001
 
@@ -38,6 +42,7 @@ waitForPort = 5000
 outputType = "webview"
 
 [deployment]
-deploymentTarget = "static"
-build = ["sh", "-c", "cd artifacts/ffa-shooter && BASE_PATH=/ pnpm run build"]
+deploymentTarget = "vm"
+build = ["bash", "-lc", "PORT=5000 BASE_PATH=/ pnpm install --frozen-lockfile=false && PORT=5000 BASE_PATH=/ pnpm --filter @workspace/ffa-shooter run build && pnpm --filter @workspace/api-server run build && rm -rf artifacts/api-server/public && cp -r artifacts/ffa-shooter/dist/public artifacts/api-server/public"]
 publicDir = "artifacts/ffa-shooter/dist/public"
+run = ["bash", "-lc", "node artifacts/api-server/dist/index.mjs"]

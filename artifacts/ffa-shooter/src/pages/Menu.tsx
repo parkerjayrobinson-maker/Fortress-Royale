@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useGameStore, SKINS, GUNS, SkinId, GunId } from "../game/useGameStore";
+import { useMultiplayerStore } from "../game/multiplayerStore";
 
 function SkinCard({ skin, selected, onClick }: { skin: typeof SKINS[0]; selected: boolean; onClick: () => void }) {
   return (
@@ -99,8 +100,22 @@ function GunCard({ gun, selected, onClick }: { gun: typeof GUNS[0]; selected: bo
 }
 
 export function Menu() {
-  const { startGame, selectedSkin, selectedGun, setSkin, setGun } = useGameStore();
+  const { startGame, startMultiplayerGame, selectedSkin, selectedGun, setSkin, setGun } = useGameStore();
+  const mpName = useMultiplayerStore((s) => s.name);
+  const setMpName = useMultiplayerStore((s) => s.setName);
+  const mpConnect = useMultiplayerStore((s) => s.connect);
+  const mpDisconnect = useMultiplayerStore((s) => s.disconnect);
+  const mpConnected = useMultiplayerStore((s) => s.connected);
+  const mpPlayerCount = useMultiplayerStore((s) => Object.keys(s.players).length);
   const [tab, setTab] = useState<"skins" | "guns">("skins");
+
+  const playMultiplayer = () => {
+    mpDisconnect();
+    setTimeout(() => {
+      mpConnect({ name: mpName, skin: selectedSkin, gun: selectedGun });
+      startMultiplayerGame();
+    }, 50);
+  };
 
   return (
     <div style={{
@@ -178,24 +193,51 @@ export function Menu() {
           )}
         </div>
 
-        <button
-          onClick={startGame}
-          style={{
-            marginTop: 20, padding: "14px 56px", fontSize: 18, fontWeight: 800,
-            color: "#0a0a1a", background: "#ffe066", border: "none", borderRadius: 8,
-            cursor: "pointer", letterSpacing: 2, textTransform: "uppercase",
-            boxShadow: "0 0 40px rgba(255,224,102,0.4), 0 4px 16px rgba(0,0,0,0.4)",
-            transition: "transform 0.1s ease, box-shadow 0.1s ease",
-          }}
-          onMouseEnter={(e) => {
-            (e.target as HTMLButtonElement).style.transform = "scale(1.04)";
-          }}
-          onMouseLeave={(e) => {
-            (e.target as HTMLButtonElement).style.transform = "scale(1)";
-          }}
-        >
-          PLAY NOW
-        </button>
+        <div style={{ marginTop: 16, display: "flex", alignItems: "center", gap: 8, width: 500 }}>
+          <input
+            value={mpName}
+            onChange={(e) => setMpName(e.target.value.slice(0, 20))}
+            placeholder="Your name"
+            style={{
+              flex: 1, padding: "10px 14px", fontSize: 14, fontWeight: 600,
+              background: "rgba(0,0,0,0.5)", border: "1px solid rgba(255,255,255,0.15)",
+              borderRadius: 8, color: "white", outline: "none", letterSpacing: 1,
+            }}
+          />
+          <span style={{ fontSize: 11, color: mpConnected ? "#7CFC9A" : "rgba(255,255,255,0.4)", letterSpacing: 1, minWidth: 110, textAlign: "right" }}>
+            {mpConnected ? `● ONLINE · ${mpPlayerCount + 1}` : "○ OFFLINE"}
+          </span>
+        </div>
+
+        <div style={{ marginTop: 14, display: "flex", gap: 12 }}>
+          <button
+            onClick={startGame}
+            style={{
+              padding: "14px 36px", fontSize: 16, fontWeight: 800,
+              color: "white", background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.18)", borderRadius: 8,
+              cursor: "pointer", letterSpacing: 2, textTransform: "uppercase",
+              transition: "transform 0.1s ease",
+            }}
+            onMouseEnter={(e) => { (e.target as HTMLButtonElement).style.transform = "scale(1.04)"; }}
+            onMouseLeave={(e) => { (e.target as HTMLButtonElement).style.transform = "scale(1)"; }}
+          >
+            Solo (Bots)
+          </button>
+          <button
+            onClick={playMultiplayer}
+            style={{
+              padding: "14px 48px", fontSize: 18, fontWeight: 800,
+              color: "#0a0a1a", background: "#ffe066", border: "none", borderRadius: 8,
+              cursor: "pointer", letterSpacing: 2, textTransform: "uppercase",
+              boxShadow: "0 0 40px rgba(255,224,102,0.4), 0 4px 16px rgba(0,0,0,0.4)",
+              transition: "transform 0.1s ease, box-shadow 0.1s ease",
+            }}
+            onMouseEnter={(e) => { (e.target as HTMLButtonElement).style.transform = "scale(1.04)"; }}
+            onMouseLeave={(e) => { (e.target as HTMLButtonElement).style.transform = "scale(1)"; }}
+          >
+            Play Online
+          </button>
+        </div>
 
         <div style={{ marginTop: 16, display: "flex", gap: 16, color: "rgba(255,255,255,0.35)", fontSize: 12, flexWrap: "wrap", justifyContent: "center" }}>
           <span><strong style={{ color: "rgba(255,255,255,0.6)" }}>WASD</strong> Move</span>

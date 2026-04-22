@@ -38,6 +38,7 @@ export interface LootBox {
 }
 
 export type GamePhase = "menu" | "playing" | "dead" | "won";
+export type GameMode = "solo" | "multiplayer";
 
 export type SkinId = "ghost" | "shadow" | "inferno" | "arctic" | "venom";
 export type GunId = "ar15" | "shotgun" | "sniper" | "smg";
@@ -141,6 +142,7 @@ let enemyIdCounter = 0;
 
 interface GameState {
   phase: GamePhase;
+  mode: GameMode;
   health: number;
   maxHealth: number;
   ammo: number;
@@ -166,6 +168,8 @@ interface GameState {
   startGame: () => void;
   resetGame: () => void;
   setPhase: (phase: GamePhase) => void;
+  setMode: (mode: GameMode) => void;
+  startMultiplayerGame: () => void;
   takeDamage: (amount: number) => void;
   shoot: () => boolean;
   addBullet: (bullet: Bullet) => void;
@@ -187,6 +191,7 @@ interface GameState {
 
 export const useGameStore = create<GameState>((set, get) => ({
   phase: "menu",
+  mode: "solo",
   health: 100,
   maxHealth: 100,
   ammo: 30,
@@ -281,15 +286,41 @@ export const useGameStore = create<GameState>((set, get) => ({
     if (!hit) get().showNotification("Swing! (no target)");
   },
 
+  setMode: (mode) => set({ mode }),
+
+  startMultiplayerGame: () => {
+    const { selectedGun } = get();
+    const gun = GUNS.find((g) => g.id === selectedGun)!;
+    set({
+      phase: "playing",
+      mode: "multiplayer",
+      health: 100,
+      ammo: gun.ammo,
+      maxAmmo: gun.ammo,
+      score: 0,
+      kills: [],
+      enemies: [],
+      bullets: [],
+      isReloading: false,
+      reloadProgress: 0,
+      isAiming: false,
+      selectedSlot: 0,
+      hasSword: false,
+      lootBoxes: INITIAL_LOOT_BOXES.map((b) => ({ ...b })),
+      notification: null,
+    });
+  },
+
   startGame: () => {
     enemyIdCounter = 0;
     const { selectedGun } = get();
     const gun = GUNS.find((g) => g.id === selectedGun)!;
-    const enemies = Array.from({ length: 8 }, (_, i) =>
+    const enemies = Array.from({ length: 8 }, (_, _i) =>
       makeEnemy(`enemy-${enemyIdCounter++}`)
     );
     set({
       phase: "playing",
+      mode: "solo",
       health: 100,
       ammo: gun.ammo,
       maxAmmo: gun.ammo,
@@ -331,7 +362,13 @@ export const useGameStore = create<GameState>((set, get) => ({
     return true;
   },
 
-  addBullet: (bullet) => set((state) => ({ bullets: [...state.bullets, bullet] })),
+  addBullet: (bullet) => {
+    set((state) => ({ bullets: [...state.bullets, bullet] }));
+    if (bullet.fromPlayer) {
+      const fn = (window as any).__mpSendShot;
+      if (typeof fn === "function") fn(bullet);
+    }
+  },
   removeBullet: (id) => set((state) => ({ bullets: state.bullets.filter((b) => b.id !== id) })),
   updateBullets: (bullets) => set({ bullets }),
 
@@ -344,7 +381,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     set((state) => ({ enemies: state.enemies.map((e) => e.id === id ? { ...e, ...updates } : e) })),
 
   killEnemy: (id, headshot = false) => {
-    const { score, enemies, addKillFeed, spawnEnemies } = get();
+    const { score, enemies, addKillFeed, spawnEnemies, mode } = get();
     const alive = enemies.filter((e) => e.alive && e.id !== id);
     const pts = headshot ? 250 : 100;
     set((state) => ({
@@ -352,10 +389,12 @@ export const useGameStore = create<GameState>((set, get) => ({
       score: score + pts,
     }));
     addKillFeed(headshot ? `HEADSHOT KILL! +${pts} pts` : `Enemy eliminated! +${pts} pts`);
-    if (alive.length === 0) {
-      set({ phase: "won" });
-    } else if (alive.length <= 3) {
-      spawnEnemies(2);
+    if (mode === "solo") {
+      if (alive.length === 0) {
+        set({ phase: "won" });
+      } else if (alive.length <= 3) {
+        spawnEnemies(2);
+      }
     }
   },
 

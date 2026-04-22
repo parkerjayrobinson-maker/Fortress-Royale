@@ -37,3 +37,13 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - `pnpm --filter @workspace/api-server run dev` — run API server locally
 
 See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details.
+
+## Multiplayer (added April 2026)
+
+- WebSocket server lives in `artifacts/api-server/src/multiplayer.ts` (path `/ws`, 20Hz snapshots).
+- The api-server now also serves the built frontend from `artifacts/api-server/public` so a single deploy hosts both the game and the realtime server.
+- Client store: `artifacts/ffa-shooter/src/game/multiplayerStore.ts` (auto-uses `wss://<current host>/ws`, override with `VITE_WS_URL`).
+- In-game integration: `Multiplayer.tsx` (sync + relay) + `RemotePlayers.tsx` (renders other players).
+- Menu has a name input and **Play Online** button that connects to the WS server and starts a multiplayer match (no bots).
+- Deployment is configured as VM (`node artifacts/api-server/dist/index.mjs`). Build step: pnpm install → build ffa-shooter → build api-server → copy dist/public into api-server/public.
+- For GitHub Pages hosting, build with `VITE_WS_URL=wss://<your-replit-app>.replit.app/ws pnpm --filter @workspace/ffa-shooter run build` and upload `artifacts/ffa-shooter/dist/public/`.
