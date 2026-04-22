@@ -16,6 +16,18 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - **API codegen**: Orval (from OpenAPI spec)
 - **Build**: esbuild (CJS bundle)
 
+## Apps
+
+- `artifacts/ffa-shooter` — React + Vite + Three.js 3D shooter (frontend)
+- `artifacts/api-server` — Express backend (not currently wired into the workflow)
+- `artifacts/mockup-sandbox` — Vite mockup tool
+
+## Replit Setup
+
+- Workflow `Start application` runs the ffa-shooter Vite dev server on port 5000 with `BASE_PATH=/`.
+- Vite is configured with `host: 0.0.0.0` and `allowedHosts: true` to work behind the Replit proxy.
+- Deployment is configured as a static build of the ffa-shooter app (`artifacts/ffa-shooter/dist/public`).
+
 ## Key Commands
 
 - `pnpm run typecheck` — full typecheck across all packages
